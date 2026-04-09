@@ -3,7 +3,7 @@ import * as path from 'path';
 import { getCachedParse } from '../utils/parseCache';
 import { ReferenceIndex } from '../services/referenceIndex';
 import { ReferenceUpdater } from '../services/referenceUpdater';
-import { isPhpFile } from '../utils/pathUtils';
+import { isPhpFile, normalizePath } from '../utils/pathUtils';
 import { buildFqcn, isValidClassName } from '../utils/phpStringUtils';
 import { findMemberReferences } from '../utils/memberSearch';
 import { locToRange, mergeWorkspaceEdit } from '../utils/workspaceEditUtils';
@@ -167,7 +167,9 @@ export class PhpClassRenameProvider implements vscode.RenameProvider {
         // 3. Update references in other files that import this class (parallel)
         if (info.className) {
             const fqcn = buildFqcn(info.namespace, info.className);
-            const referencingFiles = this.index.findReferencingFiles(fqcn);
+            const declaringFilePath = normalizePath(document.fileName);
+            const referencingFiles = this.index.findReferencingFiles(fqcn)
+                .filter(entry => entry.filePath !== declaringFilePath);
 
             const batchSize = 50;
             for (let i = 0; i < referencingFiles.length; i += batchSize) {
